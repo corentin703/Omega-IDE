@@ -2,10 +2,24 @@
 import React, { Component } from 'react';
 import MonacoEditor from '@monaco-editor/react';
 import ReactResizeDetector from 'react-resize-detector';
+import * as monacoTypes from 'monaco-editor/esm/vs/editor/editor.api';
 
-export default class Monaco extends Component {
+type IStandaloneCodeEditor = monacoTypes.editor.IStandaloneCodeEditor;
 
-    constructor(props) {
+type MonacoProps = {
+    value?: string;
+    onChange: (userdata: any, newValue?: string) => void;
+    userdata: any;
+};
+
+type MonacoState = {
+    editor: IStandaloneCodeEditor | null;
+    monaco: typeof monacoTypes | null;
+};
+
+export default class Monaco extends Component<MonacoProps, MonacoState> {
+
+    constructor(props: MonacoProps) {
         super(props);
         
         this.state = {
@@ -18,7 +32,7 @@ export default class Monaco extends Component {
         this.handleResize = this.handleResize.bind(this);
     }
 
-    editorDidMount(editor, monaco) {
+    editorDidMount(editor: IStandaloneCodeEditor, monaco: typeof monacoTypes) {
         this.setState({
             editor: editor,
             monaco: monaco
@@ -30,7 +44,7 @@ export default class Monaco extends Component {
             this.state.editor.layout();
     }
     
-    handleChange(newValue, e) {
+    handleChange(newValue?: string) {
         if (this.props.onChange)
             this.props.onChange(this.props.userdata, newValue);
     }
@@ -46,7 +60,7 @@ export default class Monaco extends Component {
                         theme="vs-dark"
                         value={this.props.value}
                         onChange={this.handleChange}
-                        editorDidMount={this.editorDidMount}
+                        onMount={this.editorDidMount}
                     />
                 </div>
             </ReactResizeDetector>

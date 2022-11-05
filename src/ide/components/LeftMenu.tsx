@@ -1,7 +1,12 @@
 
-import React, { Component } from 'react';
+import { Component, ReactElement } from 'react';
 
-class LeftMenu extends Component {
+type LeftMenuProps = {
+    shown: boolean;
+    children: ReactElement;
+};
+
+class LeftMenu extends Component<LeftMenuProps> {
     render() {
         return (
             <div className={"editor__leftmenu" + (this.props.shown ? " editor__leftmenu__shown" : "")}>
@@ -11,7 +16,7 @@ class LeftMenu extends Component {
     }
 }
 
-class LeftMenuTitle extends Component {
+class LeftMenuTitle extends Component<{ children: ReactElement }> {
     render() {
         return (
             <div className="editor__leftmenu__title">
@@ -23,7 +28,7 @@ class LeftMenuTitle extends Component {
     }
 }
 
-class LeftMenuContent extends Component {
+class LeftMenuContent extends Component<{ children: ReactElement }> {
     render() {
         return (
             <div className="editor__leftmenu__content">
@@ -33,7 +38,7 @@ class LeftMenuContent extends Component {
     }
 }
 
-class LeftMenuActions extends Component {
+class LeftMenuActions extends Component<{ children: ReactElement }> {
     render() {
         return (
             <div className="editor__leftmenu__actions">
@@ -43,8 +48,15 @@ class LeftMenuActions extends Component {
     }
 }
 
-class LeftMenuAction extends Component {
-    constructor(props) {
+type LeftMenuActionProps = {
+    children: ReactElement;
+    onClick: (userdata: any) => void;
+    userdata: any;
+    icon: string;
+}
+
+class LeftMenuAction extends Component<LeftMenuActionProps> {
+    constructor(props: LeftMenuActionProps) {
         super(props);
 
         this.handleClick = this.handleClick.bind(this);

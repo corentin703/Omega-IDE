@@ -1,8 +1,17 @@
 
-import React, { Component } from 'react';
+import React, { Component, ReactElement } from 'react';
 
-class SimulatorScreen extends Component {
-    constructor(props) {
+type SimulatorScreenProps = {
+    onScreen: () => void;
+    children: ReactElement;
+};
+
+type SimulatorScreenState = {
+    selected: boolean;
+};
+
+class SimulatorScreen extends Component<SimulatorScreenProps, SimulatorScreenState> {
+    constructor(props: SimulatorScreenProps) {
         super(props);
         
         this.handleClick = this.handleClick.bind(this);
@@ -13,7 +22,7 @@ class SimulatorScreen extends Component {
         }
     }
     
-    handleClick(event) {
+    handleClick(event: React.MouseEvent) {
         event.stopPropagation();
         
         this.setState({
@@ -21,7 +30,7 @@ class SimulatorScreen extends Component {
         });
     }
     
-    handleScreen(event) {
+    handleScreen(event: React.MouseEvent) {
         event.stopPropagation();
         
         this.props.onScreen();
@@ -29,12 +38,20 @@ class SimulatorScreen extends Component {
     
     render() {
         return (
-            <div onClick={this.handleClick} className={"editor__leftmenu__dropdown" + (this.state.selected ? " editor__leftmenu__dropdown-selected" : "")}>
+            <div 
+                onClick={this.handleClick} 
+                className={`"editor__leftmenu__dropdown ${this.state.selected && "editor__leftmenu__dropdown-selected"}`}
+            >
                 <div className="editor__leftmenu__dropdown__title">
                     <i className="editor__leftmenu__dropdown__title__chevron material-icons">keyboard_arrow_right</i>
                     <span className="editor__leftmenu__dropdown__title__content">SCREEN</span>
                     <div className="editor__leftmenu__dropdown__title__actions editor__leftmenu__dropdown__title__actions__normal">
-                        <i className="editor__leftmenu__dropdown__title__actions__icon material-icons" onClick={this.handleScreen}>photo_camera</i>
+                        <i 
+                            className="editor__leftmenu__dropdown__title__actions__icon material-icons" 
+                            onClick={this.handleScreen}
+                        >
+                            photo_camera
+                        </i>
                     </div>
                 </div>
                 <div className="editor__leftmenu__dropdown__content editor__simulator__screen">
@@ -45,16 +62,40 @@ class SimulatorScreen extends Component {
     }
 }
 
-class SimulatorKey extends Component {
-    render() {
-        return (
-            <span onClick={(event) => {event.stopPropagation()}} onMouseDown={(event) => {event.stopPropagation();this.props.onMouseDown(this.props.keynum)}} onMouseUp={(event) => {event.stopPropagation();this.props.onMouseUp(this.props.keynum)}} className={"editor__simulator__keyboard__key editor__simulator__keyboard__key__" + this.props.keyname}></span>
-        );
-    }
+type SimulatorKeyProps = {
+    keynum: number;
+    keyname: string;
+    onMouseUp: (keynum: number) => void;
+    onMouseDown: (keynum: number) => void;
 }
 
-class SimulatorKeyboard extends Component {
-    constructor(props) {
+function SimulatorKey(props: SimulatorKeyProps) {
+    return (
+        <span 
+            onClick={(event) => event.stopPropagation()} 
+            onMouseDown={(event) => {
+                event.stopPropagation(); props.onMouseDown(props.keynum)
+            }}
+            onMouseUp={(event) => {
+                event.stopPropagation(); props.onMouseUp(props.keynum)
+            }} 
+            className={`editor__simulator__keyboard__key editor__simulator__keyboard__key__${props.keyname}`}
+        >
+        </span>
+    );
+}
+
+type SimulatorKeyboardProps = {
+    onKeyDown: (keynum: number) => void;
+    onKeyUp: (keynum: number) => void;
+};
+
+type SimulatorKeyboardState = {
+    selected: boolean;
+};
+
+class SimulatorKeyboard extends Component<SimulatorKeyboardProps, SimulatorKeyboardState> {
+    constructor(props: SimulatorKeyboardProps) {
         super(props);
         
         this.handleMouseDown = this.handleMouseDown.bind(this);
@@ -66,7 +107,7 @@ class SimulatorKeyboard extends Component {
         }
     }
     
-    handleClick(event) {
+    handleClick(event: React.MouseEvent) {
         event.stopPropagation();
         
         this.setState({
@@ -74,11 +115,11 @@ class SimulatorKeyboard extends Component {
         });
     }
     
-    handleMouseDown(num) {
+    handleMouseDown(num: number) {
         this.props.onKeyDown(num);
     }
     
-    handleMouseUp(num) {
+    handleMouseUp(num: number) {
         this.props.onKeyUp(num);
     }
 

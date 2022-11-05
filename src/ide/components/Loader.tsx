@@ -1,5 +1,5 @@
 
-import React, { Component } from 'react';
+import { Component } from 'react';
 
 const funny_phrases = [
     "Loading swagg NumWorks...",
@@ -45,11 +45,19 @@ const funny_phrases = [
     "We do a math firmware without understang its maths engine"
 ];
 
-export default class Loader extends Component {
-    constructor(props) {
+type LoaderProps = {
+    hidden: boolean;
+};
+
+type LoaderState = {
+    funny: string;
+};
+
+export default class Loader extends Component<LoaderProps, LoaderState> {
+    constructor(props: LoaderProps) {
         super(props);
         
-        let index = Math.floor(Math.random() * Math.floor(funny_phrases.length));
+        const index = Math.floor(Math.random() * Math.floor(funny_phrases.length));
         
         this.state = {
             funny: funny_phrases[index]

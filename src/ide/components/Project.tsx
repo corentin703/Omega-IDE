@@ -1,18 +1,51 @@
 
-import React, { Component } from 'react';
+import React, { Component, ReactElement } from 'react';
 
-export default class Project extends Component {
-    constructor(props) {
+type ProjectProps = {
+    name: string;
+    renaming: boolean;
+    selected: boolean;
+    loading: boolean;
+    locked: boolean;
+    nousb: boolean;
+    userdata: any;
+    onRemove: (userdata: any) => void;
+    onSelect: (userdata: any) => void;
+    onNewFile: (userdata: any) => void;
+    onRename: (userdata: any, name: string) => void;
+    onCancel: (userdata: any) => void;
+    onSendDevice: (userdata: any) => void;
+    onZip: (userdata: any) => void;
+    onRunSimu: (userdata: any) => void;
+    children: ReactElement;
+};
+
+type ProjectStates = {
+    name: string;
+    oldName: string,
+    isRenaming: boolean;
+    ctx: {
+        x: number;
+        y: number;
+        open: boolean;
+    };
+};
+
+
+export default class Project extends Component<ProjectProps, ProjectStates> {
+    constructor(props: ProjectProps) {
         super(props);
         
         this.state = {
-            "name": props.name,
-            "oldName": "",
+            name: props.name,
+            oldName: "",
             
-            "isRenaming": props.renaming === true,
-            "ctx_open": false,
-            "ctx_x": 0,
-            "ctx_y": 0
+            isRenaming: props.renaming,
+            ctx: {
+                open: false,
+                x: 0,
+                y: 0,
+            },
         };
         
         this.handleChange       = this.handleChange.bind(this);
@@ -31,45 +64,60 @@ export default class Project extends Component {
         this.handleZip          = this.handleZip.bind(this);
     }
 
-    handleContextClose(event) {
+    handleContextClose(event: any) {
         event.preventDefault();
         this.stopBubble(event);
         
         this.setState({
-            ctx_open: false
+            ...this.state,
+            ctx: {
+                ...this.state.ctx,
+                open: false,
+            }
         });
     }
 
-    handleContextMenu(event) {
+    handleContextMenu(event: any) {
         event.preventDefault();
         this.stopBubble(event);
         
         if (!this.state.isRenaming) {
+
             this.setState({
-                ctx_open: true,
-                ctx_x: event.pageX,
-                ctx_y: event.pageY
+                ...this.state,
+                ctx: {
+                    open: true,
+                    x: event.pageX,
+                    y: event.pageY,
+                }
             });
         }
     }
     
-    handleChange(event) {
+    handleChange(event: any) {
         if (this.state.isRenaming) {
-            this.setState({name: event.target.value});
+            this.setState({
+                ...this.state,
+                name: event.target.value,
+            });
         }
     }
     
-    handleRename(event) {
+    handleRename(event: any) {
         this.stopBubble(event);
         this.handleContextClose(event);
 
-        if (this.props.locked === true)
+        if (this.props.locked)
             return;
 
-        this.setState({isRenaming: true, oldName: this.state.name});
+        this.setState({
+            ...this.state,
+            isRenaming: true,
+            oldName: this.state.name
+        });
     }
     
-    handleRemove(event) {
+    handleRemove(event: any) {
         this.stopBubble(event);
         this.handleContextClose(event);
 
@@ -80,13 +128,13 @@ export default class Project extends Component {
             this.props.onRemove(this.props.userdata);
     }
     
-    handleClick(event) {
+    handleClick(event: any) {
         this.stopBubble(event);
         if (this.props.onSelect)
             this.props.onSelect(this.props.userdata);
     }
     
-    handleValidate(event) {
+    handleValidate(event: any) {
         this.stopBubble(event);
 
         if (this.props.locked === true)
@@ -95,20 +143,28 @@ export default class Project extends Component {
         if (this.state.isRenaming) {
             if (this.props.onRename)
                 this.props.onRename(this.props.userdata, this.state.name);
-            this.setState({isRenaming: false});
+            this.setState({
+                ...this.state,
+                isRenaming: false
+            });
         }
     }
 
-    handleCancel(event) {
+    handleCancel(event: any) {
         this.stopBubble(event);
         if (this.state.isRenaming) {
-            this.setState({isRenaming: false, name: this.state.oldName});
+            this.setState({
+                ...this.state,
+                isRenaming: false,
+                name: this.state.oldName
+            });
+
             if (this.props.onCancel)
                 this.props.onCancel(this.props.userdata);
         }
     }
     
-    handleNewFile(event) {
+    handleNewFile(event: any) {
         this.stopBubble(event);
         this.handleContextClose(event);
 
@@ -119,7 +175,7 @@ export default class Project extends Component {
             this.props.onNewFile(this.props.userdata);
     }
 
-    handleKeyDown(event) {
+    handleKeyDown(event: any) {
         if (event.key === 'Enter') {
             this.handleValidate(event);
         }
@@ -128,11 +184,11 @@ export default class Project extends Component {
         }
     }
     
-    stopBubble(event) {
+    stopBubble(event: any) {
         event.stopPropagation();
     }
     
-    handleSaveDevice(event) {
+    handleSaveDevice(event: any) {
         this.stopBubble(event);
         this.handleContextClose(event);
 
@@ -142,7 +198,7 @@ export default class Project extends Component {
         this.props.onSendDevice(this.props.userdata);
     }
 
-    handleRunSimu(event) {
+    handleRunSimu(event: any) {
         this.stopBubble(event);
         this.handleContextClose(event);
 
@@ -152,7 +208,7 @@ export default class Project extends Component {
         this.props.onRunSimu(this.props.userdata);
     }
 
-    handleZip(event) {
+    handleZip(event: any) {
         this.stopBubble(event);
         this.handleContextClose(event);
 
@@ -164,11 +220,23 @@ export default class Project extends Component {
 
     render() {
         return (
-            <div onContextMenu={this.handleContextMenu} onClick={this.handleClick} className={"editor__leftmenu__dropdown" + (this.props.selected ? " editor__leftmenu__dropdown-selected" : "") + (this.props.loading ? " editor__leftmenu__dropdown-loading" : "")}>
+            <div 
+                onContextMenu={this.handleContextMenu} 
+                onClick={this.handleClick} 
+                className={"editor__leftmenu__dropdown" + (this.props.selected ? " editor__leftmenu__dropdown-selected" : "") + (this.props.loading ? " editor__leftmenu__dropdown-loading" : "")}
+            >
                 <div className={"editor__leftmenu__dropdown__title" + (this.state.isRenaming ? " editor__leftmenu__dropdown__title-rename" : "")}>
                     <i className="editor__leftmenu__dropdown__title__chevron material-icons">keyboard_arrow_right</i>
                     <span className="editor__leftmenu__dropdown__title__content">{this.props.name.toUpperCase()}</span>
-                    <input ref={(ref) => {if (this.state.isRenaming && ref !== null){ref.focus()}}} onClick={this.stopBubble} onKeyDown={this.handleKeyDown} value={this.state.name} onChange={this.handleChange} type="text" className="editor__leftmenu__dropdown__title__input"/>
+                    <input 
+                        ref={(ref) => {if (this.state.isRenaming && ref !== null){ref.focus()}}} 
+                        onClick={this.stopBubble} 
+                        onKeyDown={this.handleKeyDown} 
+                        value={this.state.name}
+                        onChange={this.handleChange} 
+                        type="text" 
+                        className="editor__leftmenu__dropdown__title__input"
+                    />
                     <div className="editor__leftmenu__dropdown__title__actions editor__leftmenu__dropdown__title__actions__normal">
                         <i title="Create file" onClick={this.handleNewFile} className="editor__leftmenu__dropdown__title__actions__icon material-icons">note_add</i>
                         <i title="Rename project" onClick={this.handleRename} className="editor__leftmenu__dropdown__title__actions__icon material-icons">create</i>
@@ -184,7 +252,10 @@ export default class Project extends Component {
                     </i>
                     <div onClick={this.handleCancel} className="editor__leftmenu__dropdown__title__renamediv"></div>
                 </div>
-                <div className={"editor__menu" + (this.state.ctx_open ? " editor__menu-open" : "")} style={(this.state.ctx_open ? {left: this.state.ctx_x, top: this.state.ctx_y} : {})}>
+                <div 
+                    className={"editor__menu" + (this.state.ctx.open ? " editor__menu-open" : "")} 
+                    style={(this.state.ctx.open ? {left: this.state.ctx.x, top: this.state.ctx.y} : {})}
+                >
                     <div onClick={this.handleNewFile} className="editor__menu__element">
                         <i className="editor__menu__element__icon material-icons">note_add</i>
                         <span className="editor__menu__element__name">Add file</span>

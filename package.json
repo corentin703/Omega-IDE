@@ -3,24 +3,19 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "@testing-library/jest-dom": "^5.16.2",
-    "@testing-library/react": "^12.1.3",
-    "@testing-library/user-event": "^13.5.0",
-    "firebase": "^7.17.2",
-    "jszip": "^3.7.1",
-    "numworks.js": "^1.1.0",
-    "nw-react-scripts": "3.4.1",
-    "react": "^17.0.2",
-    "react-dom": "^17.0.2",
-    "react-monaco-editor": "^0.47.0",
-    "react-resize-detector": "^7.0.0",
-    "react-router-dom": "^6.2.1"
+    "firebase": "^9.13.0",
+    "jszip": "^3.10.1",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "@monaco-editor/react": "^4.4.6",
+    "react-resize-detector": "^7.1.2",
+    "react-router-dom": "^6.4.3",
+    "upsilon.js": "^1.4.0"
   },
   "scripts": {
-    "start": "nw-react-scripts start",
-    "build": "nw-react-scripts build",
-    "test": "nw-react-scripts test",
-    "eject": "nw-react-scripts eject"
+    "start": "vite",
+    "build": "vite build",
+    "serve": "vite preview"
   },
   "eslintConfig": {
     "extends": "nw-react-app"
@@ -42,6 +37,8 @@
     "//": "https://github.com/nwjs-community/nw-builder",
     "platforms": [
       "osx64",
+      "linux32",
+      "linux64",
       "win32",
       "win64"
     ],
@@ -52,6 +49,19 @@
     "macIcns": "./src/logo.icns"
   },
   "devDependencies": {
-    "sass": "^1.49.9"
+    "@testing-library/jest-dom": "^5.16.5",
+    "@testing-library/react": "^13.4.0",
+    "@testing-library/user-event": "^14.4.0",
+    "@vitejs/plugin-react": "^2.2.0",
+    "eslint": "^8.26.0",
+    "eslint-config-prettier": "^8.5.0",
+    "eslint-plugin-import": "^2.26.0",
+    "eslint-plugin-jsx-a11y": "^6.6.1",
+    "eslint-plugin-react": "^7.31.10",
+    "prettier": "^2.7.1",
+    "sass": "^1.56.0",
+    "vite": "^3.2.2",
+    "vite-plugin-svgr": "^2.2.2",
+    "vite-tsconfig-paths": "^3.5.2"
   }
 }

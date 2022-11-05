@@ -1,6 +1,6 @@
 
 import React, { Component } from 'react';
-import MonacoEditor from 'react-monaco-editor';
+import MonacoEditor from '@monaco-editor/react';
 import ReactResizeDetector from 'react-resize-detector';
 
 export default class Monaco extends Component {
@@ -40,7 +40,6 @@ export default class Monaco extends Component {
             <ReactResizeDetector handleWidth handleHeight onResize={this.handleResize}>
                 <div className="editor__panel__monaco">
                     <MonacoEditor
-                        ref="monaco"
                         width="100%"
                         height="100%"
                         language="python"

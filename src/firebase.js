@@ -1,4 +1,5 @@
-import firebase from 'firebase';
+import { initializeApp } from 'firebase/app';
+import { getMessaging } from 'firebase/messaging'
 
 const firebaseConfig = {
     apiKey: "AIzaSyDVGEyNqgLCCerqbqGmUQ3mMxu8M4sYZvo",
@@ -11,8 +12,20 @@ const firebaseConfig = {
     measurementId: "G-P9YFFF08LN"
 };
 
-firebase.initializeApp(firebaseConfig);
+initializeApp(firebaseConfig);
 
-export var messaging = firebase.messaging.isSupported() ? firebase.messaging() : null;
+const initMessaging = () => {
+    const messaging = getMessaging();
 
-export default firebase;
+    if (!messaging.isSupported()) {
+        return null;
+    }
+
+    messaging.getToken({
+        vapidKey: 'BIUahBDHm8uSYVl3WGvEl4BS2v8X0yU8bkNjQiid_5x5RzlzDR2JY0uJeBzgBey1b1AvdI_Z2Bk5gwYOZpiup4g',
+    });
+
+    return messaging;
+}
+
+export const messaging = initMessaging();

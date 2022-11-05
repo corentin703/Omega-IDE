@@ -1,5 +1,5 @@
 import React, { Component } from "react";
-import { Redirect } from "react-router-dom";
+import { Navigate } from "react-router-dom";
 import "../sass/omega.ide.sass";
 
 import File from "./components/File";
@@ -58,7 +58,7 @@ import {
 import Monaco from "./components/Monaco";
 import Loader from "./components/Loader";
 import JSZip from "jszip";
-import Numworks from "numworks.js";
+import Numworks from "upsilon.js";
 
 export default class IDEEditor extends Component {
     constructor(props) {
@@ -1361,7 +1361,7 @@ export default class IDEEditor extends Component {
                 return <CalculatorError />;
             }
 
-            let files = [];
+            const files = [];
 
             if (
                 this.state.calculator.storage !== null &&
@@ -1374,6 +1374,7 @@ export default class IDEEditor extends Component {
                 ) {
                     files.push(
                         <CalculatorFile
+                            key={i}
                             userdata={i}
                             onDelete={this.handleCalculatorDelete}
                             name={
@@ -1463,6 +1464,7 @@ export default class IDEEditor extends Component {
 
                 files.push(
                     <File
+                        key={i}
                         locked={this.state.locked}
                         onRemove={this.handleFileRemove}
                         onRename={this.handleFileRename}
@@ -1570,6 +1572,7 @@ export default class IDEEditor extends Component {
 
             actions.push(
                 <LeftBarAction
+                    key={menu_name}
                     onClick={this.handleLeftBarClick}
                     userdata={menu_name}
                     locked={left_menu.locked}
@@ -1636,6 +1639,7 @@ export default class IDEEditor extends Component {
 
             tabs.push(
                 <TopBarTab
+                    key={i}
                     onClose={this.handleTabClose}
                     onClick={this.handleTabClick}
                     selected={this.state.selected_tab === i}
@@ -1819,7 +1823,7 @@ export default class IDEEditor extends Component {
                 return this.renderEditor();
             }
         } else if (this.state.logged === false) {
-            return <Redirect to={this.props.base} />;
+            return <Navigate replace to={this.props.base} />;
         } else {
             return this.renderLoading();
         }

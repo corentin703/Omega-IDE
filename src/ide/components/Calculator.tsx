@@ -1,5 +1,5 @@
 
-import React, { Component, ReactElement } from 'react';
+import React, { Component, ReactNode } from 'react';
 
 type CalculatorSearchProps = {
     onClick: (event: React.MouseEvent) => void
@@ -32,7 +32,7 @@ function CalculatorInfo(props: CalculatorInfoProps) {
 }
 
 type CalculatorInfoListProps = {
-    children: ReactElement;
+    children?: ReactNode;
 };
 
 type CalculatorInfoListState = {
@@ -78,8 +78,9 @@ class CalculatorInfoList extends Component<CalculatorInfoListProps, CalculatorIn
 }
 
 type CalculatorStorageProps = {
-    children: ReactElement;
+    children?: ReactNode;
     onZipDownload: () => void;
+    locked: boolean;
 };
 
 type CalculatorStorageState = {

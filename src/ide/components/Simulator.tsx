@@ -1,9 +1,9 @@
 
-import React, { Component, ReactElement } from 'react';
+import React, { Component, ReactNode } from 'react';
 
 type SimulatorScreenProps = {
     onScreen: () => void;
-    children: ReactElement;
+    children?: ReactNode;
 };
 
 type SimulatorScreenState = {

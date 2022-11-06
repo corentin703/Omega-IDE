@@ -1,7 +1,7 @@
 
-import React, { Component, ReactElement } from 'react';
+import React, {Component, ReactNode} from 'react';
 
-class PopUp extends Component<{ children: ReactElement }> {
+class PopUp extends Component<{ children?: ReactNode }> {
     render() {
     return (
             <div className="editor__popup">
@@ -13,7 +13,7 @@ class PopUp extends Component<{ children: ReactElement }> {
     }
 }
 
-class PopUpContent extends Component<{ children: ReactElement }> {
+class PopUpContent extends Component<{ children?: ReactNode }> {
     render() {
         return (
             <div className="editor__popup__content__mid">
@@ -23,7 +23,7 @@ class PopUpContent extends Component<{ children: ReactElement }> {
     }
 }
 
-class PopUpButtons extends Component<{ children: ReactElement }> {
+class PopUpButtons extends Component<{ children?: ReactNode }> {
     render() {
         return (
             <div className="editor__popup__content__buttons">
@@ -34,8 +34,8 @@ class PopUpButtons extends Component<{ children: ReactElement }> {
 }
 
 type PopUpButtonProps = {
-    autofocus: boolean;
-    children: ReactElement;
+    autofocus?: boolean;
+    children?: ReactNode;
     onClick: (userData: any) => void;
     userdata: any;
 };
@@ -65,7 +65,7 @@ class PopUpButton extends Component<PopUpButtonProps> {
     }
 }
 
-class PopUpBar extends Component<{ children: ReactElement }> {
+class PopUpBar extends Component<{ children?: ReactNode }> {
     render() {
         return (
             <div className="editor__popup__content__bar">
@@ -75,7 +75,7 @@ class PopUpBar extends Component<{ children: ReactElement }> {
     }
 }
 
-class PopUpTitle extends Component<{ children: ReactElement }> {
+class PopUpTitle extends Component<{ children?: ReactNode }> {
     render() {
         return (
             <span className="editor__popup__content__bar__title">
@@ -86,7 +86,7 @@ class PopUpTitle extends Component<{ children: ReactElement }> {
 }
 
 type PopUpCloseProps = {
-    children: ReactElement;
+    children?: ReactNode;
     onClick: (userData: any) => void;
     userdata: any;
 };

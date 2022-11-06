@@ -1,5 +1,6 @@
 import { initializeApp } from 'firebase/app';
-import { getMessaging } from 'firebase/messaging'
+import { getMessaging, isSupported, getToken } from 'firebase/messaging'
+import type { Messaging } from 'firebase/messaging'
 
 const firebaseConfig = {
     apiKey: "AIzaSyDVGEyNqgLCCerqbqGmUQ3mMxu8M4sYZvo",
@@ -14,14 +15,14 @@ const firebaseConfig = {
 
 initializeApp(firebaseConfig);
 
-const initMessaging = () => {
+const initMessaging = async (): Promise<Messaging | null> => {
     const messaging = getMessaging();
 
-    if (!messaging.isSupported()) {
+    if (!await isSupported()) {
         return null;
     }
 
-    messaging.getToken({
+    await getToken(messaging, {
         vapidKey: 'BIUahBDHm8uSYVl3WGvEl4BS2v8X0yU8bkNjQiid_5x5RzlzDR2JY0uJeBzgBey1b1AvdI_Z2Bk5gwYOZpiup4g',
     });
 

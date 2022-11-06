@@ -1,9 +1,9 @@
 
-import { Component, ReactElement } from 'react';
+import {Component, ReactNode} from 'react';
 
 type LeftMenuProps = {
     shown: boolean;
-    children: ReactElement;
+    children?: ReactNode;
 };
 
 class LeftMenu extends Component<LeftMenuProps> {
@@ -16,7 +16,7 @@ class LeftMenu extends Component<LeftMenuProps> {
     }
 }
 
-class LeftMenuTitle extends Component<{ children: ReactElement }> {
+class LeftMenuTitle extends Component<{ children?: string }> {
     render() {
         return (
             <div className="editor__leftmenu__title">
@@ -28,7 +28,7 @@ class LeftMenuTitle extends Component<{ children: ReactElement }> {
     }
 }
 
-class LeftMenuContent extends Component<{ children: ReactElement }> {
+class LeftMenuContent extends Component<{ children?: ReactNode }> {
     render() {
         return (
             <div className="editor__leftmenu__content">
@@ -38,7 +38,7 @@ class LeftMenuContent extends Component<{ children: ReactElement }> {
     }
 }
 
-class LeftMenuActions extends Component<{ children: ReactElement }> {
+class LeftMenuActions extends Component<{ children?: ReactNode }> {
     render() {
         return (
             <div className="editor__leftmenu__actions">
@@ -49,9 +49,9 @@ class LeftMenuActions extends Component<{ children: ReactElement }> {
 }
 
 type LeftMenuActionProps = {
-    children: ReactElement;
+    children?: ReactNode;
     onClick: (userdata: any) => void;
-    userdata: any;
+    userdata?: any;
     icon: string;
 }
 

@@ -1,9 +1,7 @@
-import React, { Component } from "react";
+import React, {Component, RefObject} from "react";
 import { Navigate } from "react-router-dom";
-import "../sass/omega.ide.sass";
+import "@/sass/omega.ide.sass";
 
-import File from "./components/File";
-import Project from "./components/Project";
 import {
     LeftMenu,
     LeftMenuTitle,
@@ -59,19 +57,114 @@ import Monaco from "./components/Monaco";
 import Loader from "./components/Loader";
 import JSZip from "jszip";
 import Numworks from "upsilon.js";
+import Project from "@/ide/components/Project";
+import File from "@/ide/components/File";
 
-export default class IDEEditor extends Component {
-    constructor(props) {
+type UserDataType = {
+    project: ProjectType;
+    file: FileType;
+}
+
+type IDEEditorProps = {
+    vercel: boolean;
+    connector: any;
+    base: string;
+}
+
+type IdeMenuType = {
+    locked: boolean;
+    icon: string;
+    render: (shown: boolean) => JSX.Element;
+};
+
+type FileType = {
+    name: string;
+    content: string;
+}
+
+type ProjectType = {
+    files: FileType[];
+    loaded: boolean;
+    name: string;
+    loading: boolean;
+    selected: boolean;
+}
+
+type TabType = {
+    content: string;
+    unsaved: boolean;
+    projects: ProjectType[];
+    project: ProjectType;
+    file: FileType;
+}
+
+type PlatformInfoType = {
+    magik: string;
+    version: string;
+    commit: string;
+    omega: {
+        version: string;
+        installed: boolean;
+    }
+}
+
+type RecordType = {
+    name: string;
+    type: string;
+    code?: string;
+    autoImport: boolean;
+    data?: Blob;
+}
+
+type StorageType = {
+    magik: string;
+    records: RecordType[];
+}
+
+type CalculatorType = {
+    model: string;
+    storage: StorageType | null;
+    platformInfo: PlatformInfoType | null;
+}
+
+type IDEEditorState = {
+    connector: any;
+    vercel: boolean;
+    logged: null | boolean;
+    tabs: TabType[];
+    selected_tab: number;
+    projects: ProjectType[];
+    creating_file_in: any | null;
+    creating_project: boolean;
+    selected_left_menu: any | null;
+    left_menues: {
+        calculator: IdeMenuType;
+        explorer: IdeMenuType;
+        simulator: IdeMenuType;
+        [menuName: string]: IdeMenuType;
+    };
+    confirm_popup_file: any | null;
+    locked: boolean;
+    simulator: null;
+    calculator: CalculatorType | null;
+    omega_theme: boolean;
+}
+
+export default class IDEEditor extends Component<IDEEditorProps, IDEEditorState> {
+    private readonly calculator: any | null = null;
+    private readonly simulatorRef: RefObject<HTMLIFrameElement> | undefined;
+
+    constructor(props: IDEEditorProps) {
         super(props);
-        document.title = "Omega - IDE";
+        // document.title = "Omega - IDE";
 
         this.state = {
             connector: props.connector.getInstance(),
-            vercel: props.vercel === true,
+            vercel: props.vercel,
             logged: null,
             tabs: [],
             selected_tab: 0,
-            projects: null,
+            projects: [],
             creating_file_in: null,
             creating_project: false,
             selected_left_menu: null,
@@ -98,17 +191,6 @@ export default class IDEEditor extends Component {
             calculator: null,
             omega_theme: false,
         };
-
-        this.simulator = (
-            <iframe
-                title="Simulator"
-                src={this.props.base + "simulator"}
-                ref={(ref) => (this.simulatorRef = ref)}
-                width="256px"
-                height="192px"
-            />
-        );
-        this.simulatorRef = null;
 
         this.componentDidMount = this.componentDidMount.bind(this);
         this.componentWillUnmount = this.componentWillUnmount.bind(this);
@@ -161,11 +243,10 @@ export default class IDEEditor extends Component {
         this.handleCalculatorZipDownload = this.handleCalculatorZipDownload.bind(
             this
         );
-        this.handleClaculatorSend = this.handleClaculatorSend.bind(this);
+        this.handleCalculatorSend = this.handleCalculatorSend.bind(this);
 
         this.toggleTheme = this.toggleTheme.bind(this);
 
-        this.calculator = null;
         if (navigator.usb !== undefined) {
             this.calculator = new Numworks();
             navigator.usb.addEventListener(
@@ -178,87 +259,85 @@ export default class IDEEditor extends Component {
         }
     }
 
-    handleClaculatorSend(the_project = null) {
-        if (this.state.calculator === null) return;
-        if (this.state.calculator.storage === null) return;
-        if (!this.state.calculator.storage.magik) return;
+    handleCalculatorSend(project?: ProjectType) {
+        if (this.state.calculator === null)
+            return;
 
-        var project = the_project;
-        if (project === null) {
+        if (this.state.calculator.storage === null)
+            return;
+
+        if (!this.state.calculator.storage.magik)
+            return;
+
+        if (project === undefined) {
             if (this.state.tabs.length === 0) return;
-            let project_id = this.getProjectID(
-                this.state.tabs[this.state.selected_tab].project
+            const projectId = this.getProjectId(
+                this.state.tabs[this.state.selected_tab].project.name
             );
 
-            if (project_id === -1) return;
+            if (projectId === -1)
+                return;
 
-            project = this.state.projects[project_id];
+            project = this.state.projects[projectId];
         }
 
-        if (!project.loaded) return;
+        if (!project.loaded)
+            return;
 
-        for (let i = 0; i < project.files.length; i++) {
-            var content = project.files[i].content;
-            var period = project.files[i].name.lastIndexOf(".");
-            var fileName = project.files[i].name.substring(0, period);
-            var fileExtension = project.files[i].name.substring(period + 1);
-            var id = null;
+        const calculator = this.state.calculator;
 
-            for (
-                var j = 0;
-                j < this.state.calculator.storage.records.length;
-                j++
-            ) {
-                var currentRecord = this.state.calculator.storage.records[j];
-                if (
-                    currentRecord.name === fileName &&
-                    currentRecord.type === fileExtension
-                ) {
-                    id = j;
-                    break;
+        project.files.forEach(file => {
+            const content = file.content;
+            const period = file.name.lastIndexOf(".");
+            const fileName = file.name.substring(0, period);
+            const fileExtension = file.name.substring(period + 1);
+
+            const recordIdx = this.state.calculator?.storage?.records
+              .findIndex(record => record.name === fileName && record.type === fileExtension);
+
+            const newRecord: RecordType = fileExtension === "py"
+              ? {
+                  name: fileName,
+                  type: fileExtension,
+                  autoImport: true,
+                  code: content,
+              }
+              : {
+                  name: fileName,
+                  type: fileExtension,
+                  autoImport: false,
+                  data: new Blob([content]),
                 }
-            }
 
-            var newRecord = {};
-
-            if (fileExtension === "py") {
-                newRecord = {
-                    name: fileName,
-                    type: fileExtension,
-                    autoImport: true,
-                    code: content,
-                };
-            } else {
-                newRecord = {
-                    name: fileName,
-                    type: fileExtension,
-                    data: new Blob(content),
-                };
-            }
-
-            var newcalc = this.state.calculator;
-
-            if (id === null) newcalc.storage.records.push(newRecord);
-            else newcalc.storage.records[id] = newRecord;
-        }
-
-        this.setState({
-            calculator: newcalc,
+            if (recordIdx === undefined)
+                calculator.storage.records.push(newRecord);
+            else
+                calculator.storage.records[recordIdx] = newRecord;
         });
 
-        this.calculator.installStorage(newcalc.storage, function () {});
+        this.setState({
+            calculator: calculator,
+        });
+
+        this.calculator.installStorage(calculator.storage, () => {
+            //
+        });
     }
 
-    handleCalculatorDelete(userdata) {
-        if (this.state.calculator === null) return;
-        if (this.state.calculator.storage === null) return;
-        if (!this.state.calculator.storage.magik) return;
+    handleCalculatorDelete(userdata: any) {
+        if (this.state.calculator === null)
+            return;
+
+        if (this.state.calculator.storage === null)
+            return;
+
+        if (!this.state.calculator.storage.magik)
+            return;
 
         this.state.calculator.storage.records.splice(userdata, 1);
 
         this.calculator.installStorage(
             this.state.calculator.storage,
-            function () {}
         );
 
         this.setState({
@@ -266,69 +345,70 @@ export default class IDEEditor extends Component {
         });
     }
 
-    handleCalculatorZipDownload() {
-        if (this.state.calculator === null) return;
-        if (this.state.calculator.storage === null) return;
-        if (!this.state.calculator.storage.magik) return;
+    async handleCalculatorZipDownload() {
+        if (this.state.calculator === null)
+            return;
 
-        var zip = new JSZip();
+        if (this.state.calculator.storage === null)
+            return;
 
-        for (let i = 0; i < this.state.calculator.storage.records.length; i++) {
-            let record = this.state.calculator.storage.records[i];
-            let name =
-                record.name + (record.type !== "" ? "." + record.type : "");
-            let content = "";
-            if (record.type === "py") {
-                content = record.code;
-            } else {
-                content = record.data;
-            }
+        if (!this.state.calculator.storage.magik)
+            return;
 
-            zip.file(name, content);
-        }
+        const zip = new JSZip();
 
-        zip.generateAsync({ type: "base64" }).then(function (base64) {
-            var link = document.createElement("a");
-            link.download = "storage.zip";
+        await Promise.all(this.state.calculator.storage.records.map(async record => {
+            const name = `${record.name}${record.type !== "" ? `.${record.type}` : ""}`;
+            const arrayBuffer = record.type === "py"
+              ? new TextEncoder().encode(record.code).buffer as ArrayBuffer
+              : await record.data?.arrayBuffer()
+            ;
 
-            link.href = "data:application/zip;base64," + base64;
-            link.click();
+            if (arrayBuffer === undefined)
+                return;
+
+            zip.file(name, arrayBuffer);
+        }));
+
+        const base64 = await zip.generateAsync({ type: "base64" });
+
+        const link = document.createElement("a");
+        link.download = "storage.zip";
+        link.href = `data:application/zip;base64,${base64}`;
+        link.click();
+    }
+
+    async handleCalculatorConnected() {
+        this.calculator.stopAutoConnect();
+
+        const model = this.calculator.getModel(false);
+        const platformInfo = await this.calculator.getPlatformInfo();
+
+        if (!platformInfo.magik) {
+            this.setState({
+                calculator: {
+                    model: model,
+                    storage: null,
+                    platformInfo: null,
+                },
+            });
+            
+            return;
+        } 
+          
+        console.log(platformInfo);
+        
+        const storage = await this.calculator.backupStorage();
+        this.setState({
+            calculator: {
+                model: model,
+                storage: storage,
+                platformInfo: platformInfo,
+            },
         });
     }
 
-    handleCalculatorConnected() {
-        this.calculator.stopAutoConnect();
-
-        var model = this.calculator.getModel(false);
-        this.calculator.getPlatformInfo().then(
-            function (pinfo) {
-                if (pinfo.magik) {
-                    console.log(pinfo);
-                    this.calculator.backupStorage().then(
-                        function (storage) {
-                            this.setState({
-                                calculator: {
-                                    model: model,
-                                    storage: storage,
-                                    pinfo: pinfo,
-                                },
-                            });
-                        }.bind(this)
-                    );
-                } else {
-                    this.setState({
-                        calculator: {
-                            model: model,
-                            storage: null,
-                            pinfo: null,
-                        },
-                    });
-                }
-            }.bind(this)
-        );
-    }
-
-    handleCalculatorDisconnected(e) {
+    handleCalculatorDisconnected() {
         this.setState({
             calculator: null,
         });
@@ -339,13 +419,13 @@ export default class IDEEditor extends Component {
     handleCalculatorConnect() {
         this.calculator.detect(
             this.handleCalculatorConnected,
-            function (error) {
+            (error: string) => {
                 console.error(error);
             }
         );
     }
 
-    handleProjectZip(userdata) {
+    async handleProjectZip(userData: UserDataType) {
         if (this.state.locked) {
             return;
         }
@@ -354,85 +434,75 @@ export default class IDEEditor extends Component {
             return;
         }
 
-        let project_id = this.getProjectID(userdata);
+        const projectIdx = this.getProjectId(userData);
 
-        if (project_id === -1) {
+        if (projectIdx === -1) {
             return;
         }
 
-        if (this.state.projects[project_id].loaded) {
-            var zip = new JSZip();
+        const project = this.state.projects[projectIdx];
+        
+        if (project.loaded) {
+            const zip = new JSZip();
 
-            for (
-                let i = 0;
-                i < this.state.projects[project_id].files.length;
-                i++
-            ) {
-                let file = this.state.projects[project_id].files[i];
+            project.files.forEach(file => {
                 zip.file(file.name, file.content);
-            }
+            });
 
-            zip.generateAsync({ type: "base64" }).then(
-                function (base64) {
-                    var link = document.createElement("a");
-                    link.download =
-                        this.state.projects[project_id].name + ".zip";
+            const base64 = await zip.generateAsync({ type: "base64" });
+
+            const link = document.createElement("a");
+            link.download = `${project.name}.zip`;
+
+            link.href = "data:application/zip;base64," + base64;
+            link.click();
+            
+            return;
+        }
+        
+        const projects = this.state.projects;
+        projects[projectIdx].loading = true;
+
+        this.setState({
+            locked: true,
+            projects: projects,
+        });
+
+        this.state.connector.loadProject(
+            userData,
+            (project: ProjectType) => {
+                const projectId = this.getProjectId(project.name);
+
+                if (projectId === -1) {
+                    return;
+                }
+
+                const projects = this.state.projects;
+                projects[projectId] = project;
+
+                const zip = new JSZip();
+
+                projects[projectId].files.forEach(file => {
+                    zip.file(file.name, file.content);
+                })
+
+                zip.generateAsync({ type: "base64" }).then((base64) => {
+                    const link = document.createElement("a");
+                    link.download = projects[projectId].name + ".zip";
 
                     link.href = "data:application/zip;base64," + base64;
                     link.click();
-                }.bind(this)
-            );
-        } else {
-            let projects = this.state.projects;
-            projects[project_id].loading = true;
-            this.setState({
-                locked: true,
-                projects: projects,
-            });
-            this.state.connector.loadProject(
-                userdata,
-                function (files) {
-                    let project_id = this.getProjectID(files.name);
+                });
 
-                    if (project_id === -1) {
-                        return;
-                    }
-
-                    let projects = this.state.projects;
-
-                    projects[project_id] = files;
-
-                    var zip = new JSZip();
-
-                    for (
-                        let i = 0;
-                        i < projects[project_id].files.length;
-                        i++
-                    ) {
-                        let file = projects[project_id].files[i];
-                        zip.file(file.name, file.content);
-                    }
-
-                    zip.generateAsync({ type: "base64" }).then(function (
-                        base64
-                    ) {
-                        var link = document.createElement("a");
-                        link.download = projects[project_id].name + ".zip";
-
-                        link.href = "data:application/zip;base64," + base64;
-                        link.click();
-                    });
-
-                    this.setState({
-                        projects: projects,
-                        locked: false,
-                    });
-                }.bind(this)
-            );
-        }
+                this.setState({
+                    projects: projects,
+                    locked: false,
+                });
+            }
+        );
     }
 
-    handleProjectSendDevice(userdata) {
+    handleProjectSendDevice(userData: UserDataType) {
         if (this.state.locked) {
             return;
         }
@@ -441,46 +511,48 @@ export default class IDEEditor extends Component {
             return;
         }
 
-        let project_id = this.getProjectID(userdata);
+        const projectId = this.getProjectId(userData);
 
-        if (project_id === -1) {
+        if (projectId === -1) {
             return;
         }
 
-        if (this.state.projects[project_id].loaded) {
-            this.handleClaculatorSend(this.state.projects[project_id]);
-        } else {
-            let projects = this.state.projects;
-            projects[project_id].loading = true;
-            this.setState({
-                locked: true,
-                projects: projects,
-            });
-            this.state.connector.loadProject(
-                userdata,
-                function (files) {
-                    let project_id = this.getProjectID(files.name);
-
-                    if (project_id === -1) {
-                        return;
-                    }
-
-                    let projects = this.state.projects;
-
-                    projects[project_id] = files;
-
-                    this.handleClaculatorSend(projects[project_id]);
-
-                    this.setState({
-                        projects: projects,
-                        locked: false,
-                    });
-                }.bind(this)
-            );
+        if (this.state.projects[projectId].loaded) {
+            this.handleCalculatorSend(this.state.projects[projectId]);
+            return;
         }
+
+        const projects = this.state.projects;
+        projects[projectId].loading = true;
+        this.setState({
+            locked: true,
+            projects: projects,
+        });
+
+        this.state.connector.loadProject(
+            userData,
+            (project: ProjectType) => {
+                const projectId = this.getProjectId(project.name);
+
+                if (projectId === -1) {
+                    return;
+                }
+
+                const projects = this.state.projects;
+
+                projects[projectId] = project;
+
+                this.handleCalculatorSend(projects[projectId]);
+
+                this.setState({
+                    projects: projects,
+                    locked: false,
+                });
+            }
+        );
     }
 
-    handleProjectRunSimu(userdata) {
+    async handleProjectRunSimu(userData: UserDataType) {
         if (this.state.locked) {
             return;
         }
@@ -489,77 +561,84 @@ export default class IDEEditor extends Component {
             return;
         }
 
-        let project_id = this.getProjectID(userdata);
+        const projectId = this.getProjectId(userData);
 
-        if (project_id === -1) {
+        if (projectId === -1) {
             return;
         }
 
-        if (this.state.projects[project_id].loaded) {
-            this.simulatorRef.contentWindow.location.reload();
-            var event = new CustomEvent("reload-simu", {
-                detail: { scripts: this.state.projects[project_id].files },
+        if (this.state.projects[projectId].loaded) {
+            this.simulatorRef.current?.contentWindow?.location.reload();
+
+            const event = new CustomEvent("reload-simu", {
+                detail: {scripts: this.state.projects[projectId].files},
             });
-            this.simulatorRef.contentWindow.document.dispatchEvent(event);
+
+            this.simulatorRef.current?.contentWindow?.document.dispatchEvent(event);
 
             this.setState({
                 selected_left_menu: "simulator",
             });
-        } else {
-            let projects = this.state.projects;
-            projects[project_id].loading = true;
-            this.setState({
-                locked: true,
-                projects: projects,
-            });
-            this.state.connector.loadProject(
-                userdata,
-                function (files) {
-                    let project_id = this.getProjectID(files.name);
 
-                    if (project_id === -1) {
-                        return;
-                    }
-
-                    let projects = this.state.projects;
-
-                    projects[project_id] = files;
-
-                    var event = new CustomEvent("reload-simu", {
-                        detail: { scripts: projects[project_id].files },
-                    });
-                    this.simulatorRef.contentWindow.document.dispatchEvent(
-                        event
-                    );
-
-                    this.setState({
-                        projects: projects,
-                        selected_left_menu: "simulator",
-                        locked: false,
-                    });
-                }.bind(this)
-            );
+            return;
         }
+        
+        const projects = this.state.projects;
+        projects[projectId].loading = true;
+        this.setState({
+            locked: true,
+            projects: projects,
+        });
+        
+        this.state.connector.loadProject(
+          userData,
+          (project: ProjectType) => {
+              const projectId = this.getProjectId(project.name);
+
+              if (projectId === -1) {
+                  return;
+              }
+
+              const projects = this.state.projects;
+
+              projects[projectId] = project;
+
+              const event = new CustomEvent("reload-simu", {
+                  detail: {scripts: projects[projectId].files},
+              });
+
+              this.simulatorRef?.current?.contentWindow?.document.dispatchEvent(
+                event
+              );
+
+              this.setState({
+                  projects: projects,
+                  selected_left_menu: "simulator",
+                  locked: false,
+              });
+          }
+        );
     }
 
     handleSimuReload() {
         if (this.simulatorRef) {
             if (this.state.tabs.length === 0) return;
 
-            let project_id = this.getProjectID(
+            const projectId = this.getProjectId(
                 this.state.tabs[this.state.selected_tab].project
             );
 
-            if (project_id === -1) return;
+            if (projectId === -1) return;
 
-            let project = this.state.projects[project_id];
+            const project = this.state.projects[projectId];
 
             if (!project.loaded) return;
 
-            var event = new CustomEvent("reload-simu", {
+            const event = new CustomEvent("reload-simu", {
                 detail: { scripts: project.files },
             });
-            this.simulatorRef.contentWindow.document.dispatchEvent(event);
+
+            this.simulatorRef.current?.contentWindow?.document.dispatchEvent(event);
 
             this.setState({
                 selected_left_menu: "simulator",
@@ -569,44 +648,50 @@ export default class IDEEditor extends Component {
 
     handleSimuScreen() {
         if (this.simulatorRef) {
-            var event = new CustomEvent("screenshot", { detail: {} });
-            this.simulatorRef.contentWindow.document.dispatchEvent(event);
+            const event = new CustomEvent("screenshot", { detail: {} });
+            this.simulatorRef.current?.contentWindow?.document.dispatchEvent(event);
         }
     }
 
-    handleSimuKeyDown(num) {
+    handleSimuKeyDown(num: number) {
         if (this.simulatorRef) {
-            var event = new CustomEvent("key-down", {
+            const event = new CustomEvent("key-down", {
                 detail: { keynum: num },
             });
-            this.simulatorRef.contentWindow.document.dispatchEvent(event);
+
+            this.simulatorRef.current?.contentWindow?.document.dispatchEvent(event);
         }
     }
 
-    handleSimuKeyUp(num) {
-        if (this.simulatorRef) {
-            var event = new CustomEvent("key-up", { detail: { keynum: num } });
-            this.simulatorRef.contentWindow.document.dispatchEvent(event);
+    handleSimuKeyUp(num: number) {
+        if (!this.simulatorRef) {
+            return;
         }
+        
+        const event = new CustomEvent("key-up", {detail: {keynum: num}});
+        this.simulatorRef.current?.contentWindow?.document.dispatchEvent(event);
     }
 
-    normalizeContent(content) {
-        let new_content = content.replace(/\r\n/g, "\n");
-        new_content = new_content.replace(/\r/g, "\n");
+    normalizeContent(content?: string) {
+        if (content === undefined)
+            return "";
 
-        if (!new_content.replace(/\s/g, "").length) {
+        let newContent = content.replace(/\r\n/g, "\n");
+        newContent = newContent.replace(/\r/g, "\n");
+
+        if (!newContent.replace(/\s/g, "").length) {
             let comment =
                 "# This comment was added automatically to allow this file to save.\n";
             comment +=
                 "# You'll be able to remove it after adding text to the file.\n";
-            new_content = comment + new_content;
+            newContent = comment + newContent;
         }
 
-        if (!new_content.endsWith("\n")) {
-            new_content += "\n";
+        if (!newContent.endsWith("\n")) {
+            newContent += "\n";
         }
 
-        return new_content;
+        return newContent;
     }
 
     onAuthStateChanged() {
@@ -614,44 +699,41 @@ export default class IDEEditor extends Component {
 
         if (this.state.projects === null && this.state.connector.isLogged()) {
             this.state.connector.getProjects(
-                function (projects) {
+                (projects: ProjectType[]) => {
                     this.setState({
                         projects: projects,
                     });
-                }.bind(this)
+                }
             );
         }
     }
 
     componentDidMount() {
         // Hide the cookies think
-        let ccgrowers = document.getElementsByClassName("cookiesconsent");
-
-        for (let i = 0; i < ccgrowers.length; i++) {
-            ccgrowers[i].style.display = "none";
+        const ccGrowers = document.getElementsByClassName("cookiesconsent") as HTMLCollectionOf<HTMLElement>;
+        for (let i = 0; i < ccGrowers.length; i++) {
+            ccGrowers[i].style.display = "none";
         }
 
         // Hide the header and footer
-        let headers = document.getElementsByClassName("header");
-
+        const headers = document.getElementsByClassName("header") as HTMLCollectionOf<HTMLElement>;
         for (let i = 0; i < headers.length; i++) {
             headers[i].classList.add("header__hidden");
         }
 
-        let footers = document.getElementsByClassName("footer");
-
+        const footers = document.getElementsByClassName("footer") as HTMLCollectionOf<HTMLElement>;
         for (let i = 0; i < footers.length; i++) {
             footers[i].classList.add("footer__hidden");
         }
 
         if (this.state.connector.isLogged()) {
             this.state.connector.getProjects(
-                function (projects) {
+                (projects: ProjectType[]) => {
                     this.setState({
                         projects: projects,
                         logged: true,
                     });
-                }.bind(this)
+                }
             );
         }
 
@@ -660,26 +742,26 @@ export default class IDEEditor extends Component {
 
     componentWillUnmount() {
         // Show the cookies think
-        let ccrevokes = document.getElementsByClassName("cc-revoke");
+        const ccRevoke = document.getElementsByClassName("cc-revoke") as HTMLCollectionOf<HTMLElement>;
 
-        for (let i = 0; i < ccrevokes.length; i++) {
-            ccrevokes[i].style.display = "flex";
+        for (let i = 0; i < ccRevoke.length; i++) {
+            ccRevoke[i].style.display = "flex";
         }
 
-        let ccgrowers = document.getElementsByClassName("cc-grower");
+        const ccGrowers = document.getElementsByClassName("cc-grower") as HTMLCollectionOf<HTMLElement>;
 
-        for (let i = 0; i < ccgrowers.length; i++) {
-            ccgrowers[i].style.display = "inherit";
+        for (let i = 0; i < ccGrowers.length; i++) {
+            ccGrowers[i].style.display = "inherit";
         }
 
         // Show the header and footer again
-        let headers = document.getElementsByClassName("header");
+        const headers = document.getElementsByClassName("header") as HTMLCollectionOf<HTMLElement>;
 
         for (let i = 0; i < headers.length; i++) {
             headers[i].classList.remove("header__hidden");
         }
 
-        let footers = document.getElementsByClassName("footer");
+        const footers = document.getElementsByClassName("footer") as HTMLCollectionOf<HTMLElement>;
 
         for (let i = 0; i < footers.length; i++) {
             footers[i].classList.remove("footer__hidden");
@@ -688,79 +770,69 @@ export default class IDEEditor extends Component {
         this.state.connector.removeAuthStateChanged(this.onAuthStateChanged);
     }
 
-    getFileContent(project, file) {
-        for (let i = 0; i < this.state.projects.length; i++) {
-            let cur_project = this.state.projects[i];
+    getFileContent(projectName: string, fileName: string) {
+        const currentProject = this.state.projects
+          .find(project => project.name === projectName);
 
-            if (cur_project.name === project) {
-                for (let j = 0; j < cur_project.files.length; j++) {
-                    let cur_file = cur_project.files[j];
-
-                    if (cur_file.name === file) {
-                        return cur_file.content;
-                    }
-                }
-            }
+        if (currentProject === undefined) {
+            return null;
         }
 
-        return null;
-    }
+        const currentFile = currentProject.files
+          .find(file => file.name === fileName)
 
-    getFileID(project, file) {
-        for (let i = 0; i < this.state.projects.length; i++) {
-            let cur_project = this.state.projects[i];
-
-            if (cur_project.name === project) {
-                for (let j = 0; j < cur_project.files.length; j++) {
-                    let cur_file = cur_project.files[j];
-
-                    if (cur_file.name === file) {
-                        return { project: i, file: j };
-                    }
-                }
-            }
+        if (currentFile === undefined) {
+            return null;
         }
 
-        return null;
+        return currentFile.content;
     }
 
-    getProjectID(project) {
-        for (let i = 0; i < this.state.projects.length; i++) {
-            let cur_project = this.state.projects[i];
+    getFileId(projectName: string, fileName: string) {
+        const currentProject = this.state.projects
+          .find(project => project.name === projectName);
 
-            if (cur_project.name === project) {
-                return i;
-            }
+        if (currentProject === undefined) {
+            return null;
         }
 
-        return -1;
-    }
+        const currentFile = currentProject.files
+          .find(file => file.name === fileName);
 
-    getTabID(project, file) {
-        for (let i = 0; i < this.state.tabs.length; i++) {
-            let tab = this.state.tabs[i];
-            if (tab.project === project && tab.file === file) {
-                return i;
-            }
+        if (currentFile === undefined) {
+            return null;
         }
 
-        return -1;
+        return {
+            project: currentProject,
+            file: currentFile,
+        };
     }
 
-    handleMonacoChange(userdata, new_content) {
-        let tab_id = this.getTabID(userdata.project, userdata.file);
+    getProjectId(projectName: string): number {
+        return this.state.projects
+          .findIndex(project => project.name === projectName);
+    }
 
-        if (tab_id === -1) {
+    getTabID(project: ProjectType, file: FileType): number {
+        return this.state.tabs
+          .findIndex(tab => tab.project === project && tab.file === file);
+    }
+
+    handleMonacoChange(userData: UserDataType, newContent?: string) {
+        const tabId = this.getTabID(userData.project, userData.file);
+
+        if (tabId !== -1) {
             return;
         }
 
-        let tabs = this.state.tabs;
-        let tab = tabs[tab_id];
+        const tabs = this.state.tabs;
+        const tab = tabs[tabId];
 
-        tab.content = this.normalizeContent(new_content);
+        tab.content = this.normalizeContent(newContent);
         tab.unsaved = true;
 
-        tabs[tab_id] = tab;
+        tabs[tabId] = tab;
 
         this.setState({
             tabs: tabs,
@@ -773,9 +845,9 @@ export default class IDEEditor extends Component {
         });
     }
 
-    handlePopUpSave(userdata) {
+    handlePopUpSave(userData: UserDataType) {
         this.handleSave();
-        this.closeTab(userdata);
+        this.closeTab(userData);
     }
 
     handleSave() {
@@ -783,38 +855,38 @@ export default class IDEEditor extends Component {
             return;
         }
 
-        let tab = this.state.tabs[this.state.selected_tab];
+        const tab = this.state.tabs[this.state.selected_tab];
 
-        var file_id = this.getFileID(tab.project, tab.file);
+        const file = this.getFileId(tab.project, tab.file);
 
-        if (file_id === null) {
+        if (file === null) {
             return;
         }
 
-        let projects = this.state.projects;
-        projects[file_id.project].loading = true;
+        const projects = this.state.projects;
+        file.project.loading = true;
 
         this.setState({
             projects: projects,
             locked: true,
         });
 
-        let project = this.state.projects[file_id.project];
-        project.files[file_id.file].content = this.normalizeContent(
+        const project = file.project;
+        file.project.content = this.normalizeContent(
             tab.content
         );
 
         this.state.connector.saveProject(
             project,
-            function (project) {
-                let tabs = this.state.tabs;
-                let tab_id = this.state.selected_tab;
-                let tab = tabs[tab_id];
+            (project: ProjectType) => {
+                const tabs = this.state.tabs;
+                const tabId = this.state.selected_tab;
+                const tab = tabs[tabId];
 
-                let projects = this.state.projects;
+                const projects = this.state.projects;
 
-                projects[file_id.project] = project;
-                projects[file_id.project].loading = false;
+                projects[file.project] = project;
+                projects[file.project].loading = false;
 
                 tab.unsaved = false;
 
@@ -823,33 +895,36 @@ export default class IDEEditor extends Component {
                     projects: projects,
                     locked: false,
                 });
-            }.bind(this)
+            }
         );
     }
 
-    handleFileClick(userdata) {
-        let tab_id = this.getTabID(userdata.project, userdata.file);
+    handleFileClick(userdata: UserDataType) {
+        const tabId = this.getTabID(userdata.project, userdata.file);
 
-        if (tab_id !== -1) {
-            this.setState({ selected_tab: tab_id });
+        if (tabId !== -1) {
+            this.setState({ selected_tab: tabId });
             return;
         }
 
-        let tabs = this.state.tabs;
-        let content = this.getFileContent(userdata.project, userdata.file);
+        const tabs = this.state.tabs;
+        const content = this.getFileContent(userdata.project, userdata.file);
 
         if (content === null) {
             return;
         }
 
-        let new_tab = {
+        const newTab: TabType = {
             project: userdata.project,
+            projects: [
+              userdata.project,
+            ],
             file: userdata.file,
             content: this.normalizeContent(content),
             unsaved: false,
         };
 
-        tabs.push(new_tab);
+        tabs.push(newTab);
 
         this.setState({
             tabs: tabs,
@@ -857,47 +932,47 @@ export default class IDEEditor extends Component {
         });
     }
 
-    handleFileRename(userdata, oldname, newname) {
+    handleFileRename(userData: UserDataType, oldName: string, newName: string): boolean {
         if (this.state.locked) {
-            return;
-        }
-
-        let file_id = this.getFileID(userdata.project, userdata.file);
-
-        if (file_id === null) {
             return false;
         }
 
-        if (this.getFileID(userdata.project, newname) !== null) {
+        const fileId = this.getFileId(userData.project.name, userData.file.name);
+
+        if (fileId === null) {
+            return false;
+        }
+
+        if (this.getFileId(userData.project.name, newName) !== null) {
             // File exists !
             return false;
         }
 
-        let projects = this.state.projects;
+        const projects = this.state.projects;
 
-        projects[file_id.project].loading = true;
+        projects[fileId.project].loading = true;
 
         this.setState({
             projects: projects,
             locked: true,
         });
 
-        let project = projects[file_id.project];
-        project.files[file_id.file].name = newname;
+        const project = projects[fileId.project];
+        project.files[fileId.file].name = newName;
 
         this.state.connector.saveProject(
             project,
-            function (project) {
-                let projects = this.state.projects;
-                projects[file_id.project] = project;
-                projects[file_id.project].loading = false;
+            (project: ProjectType) => {
+                const projects = this.state.projects;
+                projects[fileId.project] = project;
+                projects[fileId.project].loading = false;
 
-                let tab_id = this.getTabID(userdata.project, userdata.file);
+                const tabId = this.getTabID(userData.project, userData.file);
 
-                let tabs = this.state.tabs;
+                const tabs = this.state.tabs;
 
-                if (tab_id !== -1) {
-                    tabs[tab_id].file = newname;
+                if (tabId !== -1) {
+                    tabs[tabId].file = newName;
                 }
 
                 this.setState({
@@ -905,31 +980,31 @@ export default class IDEEditor extends Component {
                     projects: projects,
                     locked: false,
                 });
-            }.bind(this)
+            }
         );
 
         return true;
     }
 
-    handleFileRemove(userdata) {
+    handleFileRemove(userData: UserDataType) {
         if (this.state.locked) {
             return;
         }
 
-        let file_id = this.getFileID(userdata.project, userdata.file);
+        const fileId = this.getFileId(userData.project, userData.file);
 
-        if (file_id === null) {
+        if (fileId === null) {
             return false;
         }
 
-        let projects = this.state.projects;
+        const projects = this.state.projects;
 
-        projects[file_id.project].loading = true;
-        this.handleTabClose(userdata, true);
+        projects[fileId.project].loading = true;
+        this.handleTabClose(userData, true);
 
-        let project = JSON.parse(JSON.stringify(projects[file_id.project]));
-        project.files.splice(file_id.file, 1);
-        projects[file_id.project].files.splice(file_id.file, 1);
+        const project = JSON.parse(JSON.stringify(projects[fileId.project]));
+        project.files.splice(fileId.file, 1);
+        projects[fileId.project].files.splice(fileId.file, 1);
 
         this.setState({
             projects: projects,
@@ -938,116 +1013,117 @@ export default class IDEEditor extends Component {
 
         this.state.connector.saveProject(
             project,
-            function (project) {
-                let projects = this.state.projects;
-                projects[file_id.project] = project;
-                projects[file_id.project].loading = false;
+            (project: ProjectType) => {
+                const projects = this.state.projects;
+                projects[fileId.project] = project;
+                projects[fileId.project].loading = false;
 
                 this.setState({
                     projects: projects,
                     locked: false,
                 });
-            }.bind(this)
+            }
         );
     }
 
-    handleFileCreate(userdata) {
+    handleFileCreate(userData: UserDataType) {
         if (this.state.locked) {
             return;
         }
 
         if (this.state.creating_file_in !== null) return;
 
-        let project_id = this.getProjectID(userdata);
+        const projectId = this.getProjectId(userData);
 
-        if (project_id === -1) {
+        if (projectId === -1) {
             return;
         }
 
-        if (this.state.projects[project_id].loaded) {
+        if (this.state.projects[projectId].loaded) {
             this.setState({
-                creating_file_in: userdata,
+                creating_file_in: userData,
             });
         } else {
-            let projects = this.state.projects;
-            projects[project_id].loading = true;
+            const projects = this.state.projects;
+            projects[projectId].loading = true;
+            
             this.setState({
                 locked: true,
                 projects: projects,
             });
+            
             this.state.connector.loadProject(
-                userdata,
-                function (files) {
-                    let project_id = this.getProjectID(files.name);
+                userData,
+                (project: ProjectType) => {
+                    const projectId = this.getProjectId(project.name);
 
-                    if (project_id === -1) {
+                    if (projectId === -1) {
                         return;
                     }
 
-                    let projects = this.state.projects;
-
-                    projects[project_id] = files;
+                    const projects = this.state.projects;
+                    projects[projectId] = project;
 
                     this.setState({
                         projects: projects,
-                        creating_file_in: files.name,
+                        creating_file_in: project.name,
                         locked: false,
                     });
-                }.bind(this)
+                }
             );
         }
     }
 
-    handleNewFileCancel(userdata) {
+    handleNewFileCancel() {
         this.setState({
             creating_file_in: null,
         });
     }
 
-    handleNewFileValidate(userdata, oldname, newname) {
+    handleNewFileValidate(userData: UserDataType, oldName: string, newName: string): boolean {
         if (this.state.locked) {
-            return;
+            return false;
         }
 
-        if (newname === "") {
+        if (newName === "") {
             this.setState({
                 creating_file_in: null,
             });
-            return;
+            return false;
         }
 
-        let file_id = this.getFileID(userdata, newname);
+        const fileId = this.getFileId(userData, newName);
 
-        if (file_id !== null) {
+        if (fileId !== null) {
             // File exists
             this.setState({
                 creating_file_in: null,
             });
-            return;
+            return false;
         }
 
-        let project_id = this.getProjectID(userdata);
+        const projectId = this.getProjectId(userData);
 
-        if (project_id === -1) {
+        if (projectId === -1) {
             // Weird shit happens
             this.setState({
                 creating_file_in: null,
             });
-            return;
+            return false;
         }
 
-        let projects = this.state.projects;
+        const projects = this.state.projects;
 
-        let newfile = {
-            name: newname,
+        const newFile = {
+            name: newName,
             content: "from math import *\n",
         };
 
-        let project = JSON.parse(JSON.stringify(projects[project_id]));
+        const project = JSON.parse(JSON.stringify(projects[projectId]));
 
-        project.files.push(newfile);
-        projects[project_id].files.push(newfile);
-        projects[project_id].loading = true;
+        project.files.push(newFile);
+        projects[projectId].files.push(newFile);
+        projects[projectId].loading = true;
 
         this.setState({
             projects: projects,
@@ -1057,32 +1133,34 @@ export default class IDEEditor extends Component {
 
         this.state.connector.saveProject(
             project,
-            function (project) {
-                let projects = this.state.projects;
-                projects[project_id] = project;
+            (project: ProjectType) => {
+                const projects = this.state.projects;
+                projects[projectId] = project;
                 this.setState({
                     projects: projects,
                     creating_file_in: null,
                     locked: false,
                 });
-            }.bind(this)
+            }
         );
+
+        return true;
     }
 
-    handleProjectRemove(userdata) {
+    handleProjectRemove(userData: UserDataType) {
         if (this.state.locked) {
             return;
         }
 
-        let project_id = this.getProjectID(userdata);
+        const projectId = this.getProjectId(userData);
 
-        if (project_id === -1) {
+        if (projectId === -1) {
             return;
         }
 
-        let projects = this.state.projects;
+        const projects = this.state.projects;
 
-        projects[project_id].loading = true;
+        projects[projectId].loading = true;
 
         this.setState({
             projects: projects,
@@ -1090,41 +1168,41 @@ export default class IDEEditor extends Component {
         });
 
         this.state.connector.removeProject(
-            userdata,
-            function (name) {
-                let project_id = this.getProjectID(name);
+            userData,
+            (name: string) => {
+                const projectId = this.getProjectId(name);
 
-                if (project_id === -1) {
+                if (projectId === -1) {
                     return;
                 }
 
-                let projects = this.state.projects;
+                const projects = this.state.projects;
 
-                let tabs = this.state.tabs;
-                let newtabs = [];
+                const tabs = this.state.tabs;
+                const newTabs = [];
                 let selected_tab = this.state.selected_tab;
 
                 for (let i = 0; i < tabs.length; i++) {
-                    if (tabs[i].project !== name) {
-                        newtabs.push(tabs[i]);
+                    if (tabs[i].project.name !== name) {
+                        newTabs.push(tabs[i]);
                     } else if (this.state.selected_tab >= i) {
                         selected_tab = selected_tab > 0 ? selected_tab - 1 : 0;
                     }
                 }
 
-                projects.splice(project_id, 1);
+                projects.splice(projectId, 1);
 
                 this.setState({
                     projects: projects,
-                    tabs: newtabs,
+                    tabs: newTabs,
                     selected_tab: selected_tab,
                     locked: false,
                 });
-            }.bind(this)
+            }
         );
     }
 
-    handleCreateProject(userdata) {
+    handleCreateProject(userData: UserDataType) {
         if (this.state.locked) {
             return;
         }
@@ -1134,20 +1212,20 @@ export default class IDEEditor extends Component {
         });
     }
 
-    handleProjectRename(userdata, newname) {
+    handleProjectRename(userData: UserDataType, newName: string) {
         if (this.state.locked) {
             return;
         }
 
-        let project_id = this.getProjectID(userdata);
+        const projectId = this.getProjectId(userData);
 
-        if (project_id === -1) {
+        if (projectId === -1) {
             return;
         }
 
-        let projects = this.state.projects;
+        const projects = this.state.projects;
 
-        projects[project_id].loading = true;
+        projects[projectId].loading = true;
 
         this.setState({
             projects: projects,
@@ -1155,24 +1233,24 @@ export default class IDEEditor extends Component {
         });
 
         this.state.connector.renameProject(
-            userdata,
-            newname,
-            function (oldname, newname) {
-                let project_id = this.getProjectID(userdata);
+            userData,
+            newName,
+            (oldname: string, newname: string) => {
+                const projectId = this.getProjectId(userData);
 
-                if (project_id === -1) {
+                if (projectId === -1) {
                     return;
                 }
 
-                let projects = this.state.projects;
+                const projects = this.state.projects;
 
-                projects[project_id].name = newname;
-                projects[project_id].loading = false;
+                projects[projectId].name = newname;
+                projects[projectId].loading = false;
 
-                let tabs = this.state.tabs;
+                const tabs = this.state.tabs;
 
                 for (let i = 0; i < tabs.length; i++) {
-                    if (tabs[i].project === userdata) {
+                    if (tabs[i].project === userData) {
                         tabs[i].project = newname;
                     }
                 }
@@ -1182,88 +1260,92 @@ export default class IDEEditor extends Component {
                     tabs: tabs,
                     locked: false,
                 });
-            }.bind(this)
+            }
         );
     }
 
-    handleProjectSelect(userdata, selected) {
-        var project_id = this.getProjectID(userdata);
+    handleProjectSelect(userData: UserDataType, selected: boolean) {
+        const projectId = this.getProjectId(userData);
 
-        if (project_id === -1) {
+        if (projectId === -1) {
             return;
         }
 
-        if (!this.state.projects[project_id].selected) {
-            if (!this.state.projects[project_id].loaded) {
-                if (this.state.locked) {
-                    return;
-                }
-
-                let projects = this.state.projects;
-
-                projects[project_id].loading = true;
-
-                this.setState({
-                    projects: projects,
-                    locked: true,
-                });
-
-                this.state.connector.loadProject(
-                    userdata,
-                    function (files) {
-                        let project_id = this.getProjectID(files.name);
-
-                        if (project_id === -1) {
-                            return;
-                        }
-
-                        let projects = this.state.projects;
-
-                        projects[project_id] = files;
-
-                        this.setState({
-                            projects: projects,
-                            locked: false,
-                        });
-                    }.bind(this)
-                );
-            } else {
-                let projects = this.state.projects;
-                projects[project_id].selected = true;
-                this.setState({
-                    projects: projects,
-                });
-            }
-        } else {
-            let projects = this.state.projects;
-            projects[project_id].selected = false;
+        if (this.state.projects[projectId].selected) {
+            const projects = this.state.projects;
+            projects[projectId].selected = false;
             this.setState({
                 projects: projects,
             });
+
+            return;
         }
+
+        if (this.state.projects[projectId].loaded) {
+            const projects = this.state.projects;
+            projects[projectId].selected = true;
+            this.setState({
+                projects: projects,
+            });
+
+            return;
+        }
+
+        if (this.state.locked) {
+            return;
+        }
+
+        const projects = this.state.projects;
+
+        projects[projectId].loading = true;
+
+        this.setState({
+            projects: projects,
+            locked: true,
+        });
+
+        this.state.connector.loadProject(
+          userData,
+          (files: ProjectType) => {
+              const projectId = this.getProjectId(files.name);
+
+              if (projectId === -1) {
+                  return;
+              }
+
+              const projects = this.state.projects;
+
+              projects[projectId] = files;
+
+              this.setState({
+                  projects: projects,
+                  locked: false,
+              });
+          }
+        );
     }
 
-    handleNewProjectCancel(userdata) {
+    handleNewProjectCancel() {
         this.setState({
             creating_project: false,
         });
     }
 
-    handleNewProjectValidate(userdata, name) {
+    handleNewProjectValidate(userData: UserDataType, name: string) {
         if (this.state.locked) {
             return;
         }
 
         if (name === "") {
             this.setState({
-                creating_project: null,
+                creating_project: false,
             });
             return;
         }
 
-        let project_id = this.getProjectID(name);
+        const projectIdx = this.getProjectId(name);
 
-        if (project_id !== -1) {
+        if (projectIdx !== -1) {
             // File exists!
             this.setState({
                 creating_project: false,
@@ -1271,12 +1353,13 @@ export default class IDEEditor extends Component {
             return;
         }
 
-        let projects = this.state.projects;
+        const projects = this.state.projects;
         projects.push({
             name: name,
             files: [],
             loading: true,
             loaded: true,
+            selected: false,
         });
 
         this.setState({
@@ -1286,32 +1369,32 @@ export default class IDEEditor extends Component {
 
         this.state.connector.createProject(
             name,
-            function (files) {
-                let projects = this.state.projects;
-                let project_id = this.getProjectID(files.name);
+            (project: ProjectType) => {
+                const projects = this.state.projects;
+                const projectIdx = this.getProjectId(project.name);
 
-                projects[project_id] = files;
+                projects[projectIdx] = project;
 
                 this.setState({
                     projects: projects,
                     locked: false,
                 });
-            }.bind(this)
+            }
         );
     }
 
-    closeTab(userdata) {
-        let tab_id = this.getTabID(userdata.project, userdata.file);
+    closeTab(userData: UserDataType) {
+        const tabIdx = this.getTabID(userData.project, userData.file);
 
-        if (tab_id === -1) {
+        if (tabIdx === -1) {
             return;
         }
 
-        let tabs = this.state.tabs;
-        tabs.splice(tab_id, 1);
+        const tabs = this.state.tabs;
+        tabs.splice(tabIdx, 1);
         let selected_tab = this.state.selected_tab;
 
-        if (this.state.selected_tab >= tab_id) {
+        if (this.state.selected_tab >= tabIdx) {
             selected_tab = selected_tab > 0 ? selected_tab - 1 : 0;
         }
 
@@ -1323,33 +1406,33 @@ export default class IDEEditor extends Component {
         this.closePopUp();
     }
 
-    handleTabClose(userdata, force) {
+    handleTabClose(userData: UserDataType, force: boolean) {
         if (this.state.locked) {
             return;
         }
 
-        let tab_id = this.getTabID(userdata.project, userdata.file);
+        const tabId = this.getTabID(userData.project, userData.file);
 
-        if (tab_id === -1) {
+        if (tabId === -1) {
             return;
         }
 
-        let tab = this.state.tabs[tab_id];
+        const tab = this.state.tabs[tabId];
 
-        if (tab.unsaved && force !== true) {
+        if (tab.unsaved && !force) {
             this.setState({
-                confirm_popup_file: userdata,
+                confirm_popup_file: userData,
             });
         } else {
-            this.closeTab(userdata);
+            this.closeTab(userData);
         }
     }
 
-    handleTabClick(userdata) {
-        let tab_id = this.getTabID(userdata.project, userdata.file);
+    handleTabClick(userData: UserDataType) {
+        const tabIdx = this.getTabID(userData.project, userData.file);
 
-        if (tab_id !== -1) {
-            this.setState({ selected_tab: tab_id });
+        if (tabIdx !== -1) {
+            this.setState({ selected_tab: tabIdx });
         }
     }
 
@@ -1357,7 +1440,7 @@ export default class IDEEditor extends Component {
         if (this.state.calculator === null) {
             return <CalculatorSearch onClick={this.handleCalculatorConnect} />;
         } else {
-            if (this.state.calculator.pinfo === null) {
+            if (this.state.calculator.platformInfo === null) {
                 return <CalculatorError />;
             }
 
@@ -1397,17 +1480,17 @@ export default class IDEEditor extends Component {
                         />
                         <CalculatorInfo
                             name="Epsilon version"
-                            value={this.state.calculator.pinfo.version}
+                            value={this.state.calculator.platformInfo.version}
                         />
                         <CalculatorInfo
                             name="Epsilon commit"
-                            value={this.state.calculator.pinfo.commit}
+                            value={this.state.calculator.platformInfo.commit}
                         />
                         <CalculatorInfo
                             name="Omega version"
                             value={
-                                this.state.calculator.pinfo.omega.installed
-                                    ? this.state.calculator.pinfo.omega.version
+                                this.state.calculator.platformInfo.omega.installed
+                                    ? this.state.calculator.platformInfo.omega.version
                                     : "Not installed"
                             }
                         />
@@ -1423,7 +1506,7 @@ export default class IDEEditor extends Component {
         }
     }
 
-    renderCalculator(shown) {
+    renderCalculator(shown: boolean) {
         return (
             <LeftMenu shown={shown}>
                 <LeftMenuTitle>CALCULATOR</LeftMenuTitle>
@@ -1434,13 +1517,19 @@ export default class IDEEditor extends Component {
         );
     }
 
-    renderSimulator(shown) {
+    renderSimulator(shown: boolean) {
         return (
             <LeftMenu shown={shown}>
                 <LeftMenuTitle>SIMULATOR</LeftMenuTitle>
                 <LeftMenuContent>
                     <SimulatorScreen onScreen={this.handleSimuScreen}>
-                        {this.simulator}
+                        <iframe
+                          title="Simulator"
+                          src={`${this.props.base}simulator`}
+                          ref={this.simulatorRef}
+                          width="256px"
+                          height="192px"
+                        />
                     </SimulatorScreen>
                     <SimulatorKeyboard
                         onKeyDown={this.handleSimuKeyDown}
@@ -1451,16 +1540,15 @@ export default class IDEEditor extends Component {
         );
     }
 
-    renderExplorer(shown) {
-        let content = [];
+    renderExplorer(shown: boolean) {
+        const files = [];
+        const content = [];
 
         for (let i = 0; i < this.state.projects.length; i++) {
-            let project = this.state.projects[i];
-
-            var files = [];
+            const project = this.state.projects[i];
 
             for (let j = 0; j < project.files.length; j++) {
-                let file = project.files[j];
+                const file = project.files[j];
 
                 files.push(
                     <File
@@ -1475,12 +1563,13 @@ export default class IDEEditor extends Component {
                 );
             }
 
-            var selected = project.selected;
+            let selected = project.selected;
 
             if (this.state.creating_file_in === project.name) {
                 selected = true;
                 files.push(
                     <File
+                        key={i}
                         locked={this.state.locked}
                         userdata={project.name}
                         onRename={this.handleNewFileValidate}
@@ -1499,7 +1588,7 @@ export default class IDEEditor extends Component {
                     onZip={this.handleProjectZip}
                     onSendDevice={this.handleProjectSendDevice}
                     onRunSimu={this.handleProjectRunSimu}
-                    onSelect={this.handleProjectSelect}
+                    onSelect={(userdata) => this.handleProjectSelect(userdata, true)}
                     selected={selected}
                     onRename={this.handleProjectRename}
                     onRemove={this.handleProjectRemove}
@@ -1512,7 +1601,7 @@ export default class IDEEditor extends Component {
             );
         }
 
-        if (this.state.creating_project === true) {
+        if (this.state.creating_project) {
             content.push(
                 <Project
                     nousb={this.state.calculator === null}
@@ -1542,14 +1631,14 @@ export default class IDEEditor extends Component {
         );
     }
 
-    handleLeftBarClick(userdata) {
-        if (userdata === this.state.selected_left_menu) {
+    handleLeftBarClick(userData: UserDataType) {
+        if (userData === this.state.selected_left_menu) {
             this.setState({
                 selected_left_menu: null,
             });
         } else {
             this.setState({
-                selected_left_menu: userdata,
+                selected_left_menu: userData,
             });
         }
     }
@@ -1561,23 +1650,23 @@ export default class IDEEditor extends Component {
     }
 
     renderLeftBar() {
-        let actions = [];
-        let menues = [];
+        const actions = [];
+        const menues = [];
 
-        for (let menu_name in this.state.left_menues) {
-            let left_menu = this.state.left_menues[menu_name];
-            let selected = menu_name === this.state.selected_left_menu;
+        for (const menuName in this.state.left_menues) {
+            const leftMenu = this.state.left_menues[menuName];
+            const selected = menuName === this.state.selected_left_menu;
 
-            menues.push(left_menu.render(selected));
+            menues.push(leftMenu.render(selected));
 
             actions.push(
                 <LeftBarAction
-                    key={menu_name}
+                    key={menuName}
                     onClick={this.handleLeftBarClick}
-                    userdata={menu_name}
-                    locked={left_menu.locked}
+                    userdata={menuName}
+                    locked={leftMenu.locked}
                     selected={selected}
-                    icon={left_menu.icon}
+                    icon={leftMenu.icon}
                 />
             );
         }
@@ -1632,15 +1721,15 @@ export default class IDEEditor extends Component {
     }
 
     renderCentralPane() {
-        let tabs = [];
+        const tabs = [];
 
         for (let i = 0; i < this.state.tabs.length; i++) {
-            let tab = this.state.tabs[i];
+            const tab = this.state.tabs[i];
 
             tabs.push(
                 <TopBarTab
                     key={i}
-                    onClose={this.handleTabClose}
+                    onClose={(userData) => this.handleTabClose(userData, false)}
                     onClick={this.handleTabClick}
                     selected={this.state.selected_tab === i}
                     unsaved={tab.unsaved}
@@ -1651,7 +1740,7 @@ export default class IDEEditor extends Component {
             );
         }
 
-        let curr_tab = this.state.tabs[this.state.selected_tab];
+        const currentTab = this.state.tabs[this.state.selected_tab];
 
         return (
             <div className="editor__panel">
@@ -1660,17 +1749,17 @@ export default class IDEEditor extends Component {
                     <TopBarTabs>{tabs}</TopBarTabs>
                     <TopBarMore onClick={this.handleSave} />
                     <TopBarFileName>
-                        {curr_tab.project} {">"} {curr_tab.file}
+                        {currentTab.project} {">"} {currentTab.file}
                     </TopBarFileName>
                 </TopBar>
 
                 {/* Monaco */}
                 <Monaco
                     onChange={this.handleMonacoChange}
-                    value={curr_tab.content}
+                    value={currentTab.content}
                     userdata={{
-                        project: curr_tab.project,
-                        file: curr_tab.file,
+                        project: currentTab.project,
+                        file: currentTab.file,
                     }}
                 />
             </div>
@@ -1692,7 +1781,7 @@ export default class IDEEditor extends Component {
                         Do you want to save the changes you made to{" "}
                         {this.state.confirm_popup_file.file} ?
                     </p>
-                    <p>Your changes will be lost if you don't save them.</p>
+                    <p>{"Your changes will be lost if you don't save them."}</p>
                 </PopUpContent>
                 <PopUpButtons>
                     <PopUpButton
@@ -1705,7 +1794,7 @@ export default class IDEEditor extends Component {
                         userdata={this.state.confirm_popup_file}
                         onClick={this.closeTab}
                     >
-                        Don't save
+                        {"Don't save"}
                     </PopUpButton>
                     <PopUpButton
                         userdata={this.state.confirm_popup_file}
@@ -1760,7 +1849,7 @@ export default class IDEEditor extends Component {
                         icon="usb"
                         hoverable={true}
                         locked={this.calculator === null}
-                        onClick={this.handleClaculatorSend}
+                        onClick={this.handleCalculatorSend}
                     >
                         Device
                     </BottomBarElement>

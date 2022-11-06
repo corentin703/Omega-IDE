@@ -1,6 +1,6 @@
 
 import OmegaLogo from '@/img/logo-ide.svg';
-import { Component, ReactElement } from 'react';
+import {Component, ReactNode, ReactNode} from 'react';
 
 class GreetingLogo extends Component {
     render() {
@@ -10,7 +10,7 @@ class GreetingLogo extends Component {
     }
 }
 
-class GreetingTitle extends Component<{ children: ReactElement }> {
+class GreetingTitle extends Component<{ children?: ReactNode }> {
     render() {
         return (
             <h1 className="editor__panel__greeting__content__title">
@@ -20,7 +20,7 @@ class GreetingTitle extends Component<{ children: ReactElement }> {
     }
 }
 
-class GreetingVersion extends Component<{ children: ReactElement }> {
+class GreetingVersion extends Component<{ children?: ReactNode }> {
     render() {
         return (
             <h2 className="editor__panel__greeting__content__version">
@@ -30,7 +30,7 @@ class GreetingVersion extends Component<{ children: ReactElement }> {
     }
 }
 
-class Help extends Component<{ children: ReactElement }> {
+class Help extends Component<{ children?: ReactNode }> {
     render() {
         return (
             <div className="editor__panel__greeting__content__help">
@@ -40,7 +40,7 @@ class Help extends Component<{ children: ReactElement }> {
     }
 }
 
-class HelpLine extends Component<{ children: ReactElement }> {
+class HelpLine extends Component<{ children?: ReactNode }> {
     render() {
         return (
             <div className="editor__panel__greeting__content__help__line">
@@ -50,7 +50,7 @@ class HelpLine extends Component<{ children: ReactElement }> {
     }
 }
 
-class HelpLeft extends Component<{ children: ReactElement }> {
+class HelpLeft extends Component<{ children?: ReactNode }> {
     render() {
         return (
             <div className="editor__panel__greeting__content__help__left">
@@ -60,7 +60,7 @@ class HelpLeft extends Component<{ children: ReactElement }> {
     }
 }
 
-class HelpRight extends Component<{ children: ReactElement }> {
+class HelpRight extends Component<{ children?: ReactNode }> {
     render() {
         return (
             <div className="editor__panel__greeting__content__help__right">
@@ -70,7 +70,7 @@ class HelpRight extends Component<{ children: ReactElement }> {
     }
 }
 
-class HelpKey extends Component<{ children: ReactElement }> {
+class HelpKey extends Component<{ children?: ReactNode }> {
     render() {
         return (
             <span className="editor__panel__greeting__content__help__key">{this.props.children}</span>
@@ -78,7 +78,7 @@ class HelpKey extends Component<{ children: ReactElement }> {
     }
 }
 
-class Greeting extends Component<{ children: ReactElement }> {
+class Greeting extends Component<{ children?: ReactNode }> {
     render() {
         return (
             <div className="editor__panel__greeting">

@@ -1,7 +1,7 @@
 
-import { Component, ReactChildren } from 'react';
+import { Component, ReactNode } from 'react';
 
-class BottomBar extends Component<{ children: ReactChildren }> {
+class BottomBar extends Component<{ children?: ReactNode }> {
   render() {
     return (
       <div className="editor__bottombar">
@@ -12,13 +12,13 @@ class BottomBar extends Component<{ children: ReactChildren }> {
 }
 
 type BottomBarElementProps = {
-  locked: boolean;
-  hoverable: boolean;
-  right: boolean;
-  onClick: (userdata: any) => void;
-  userdata: any;
-  icon: string;
-  children: ReactChildren;
+  locked?: boolean;
+  hoverable?: boolean;
+  right?: boolean;
+  onClick?: (userdata: any) => void;
+  userdata?: any;
+  icon?: string;
+  children?: ReactNode;
 };
 
 class BottomBarElement extends Component<BottomBarElementProps> {

@@ -1108,6 +1108,11 @@
   dependencies:
     "@types/jest" "*"
 
+"@types/w3c-web-usb@^1.0.6":
+  "integrity" "sha512-cSjhgrr8g4KbPnnijAr/KJDNKa/bBa+ixYkywFRvrhvi9n1WEl7yYbtRyzE6jqNQiSxxJxoAW3STaOQwJHndaw=="
+  "resolved" "https://registry.npmjs.org/@types/w3c-web-usb/-/w3c-web-usb-1.0.6.tgz"
+  "version" "1.0.6"
+
 "@types/yargs-parser@*":
   "integrity" "sha512-iO9ZQHkZxHn4mSakYV0vFHAVDyEOIJQrV2uZ06HxEPcx+mt8swXoZHIbaaJ2crJYFfErySgktuTZ3BeLz+XmFA=="
   "resolved" "https://registry.npmjs.org/@types/yargs-parser/-/yargs-parser-21.0.0.tgz"

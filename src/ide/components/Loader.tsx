@@ -46,7 +46,7 @@ const funny_phrases = [
 ];
 
 type LoaderProps = {
-    hidden: boolean;
+    hidden?: boolean;
 };
 
 type LoaderState = {
@@ -66,7 +66,7 @@ export default class Loader extends Component<LoaderProps, LoaderState> {
 
     render() {
         return (
-            <div className={"editor__loading" + (this.props.hidden ? " editor__loading__hidden" : "")}>
+            <div className={`editor__loading ${this.props.hidden && "editor__loading__hidden"}`}>
                 <div className="editor__loading__content">
                     <p className="editor__loading__content__title">
                         Omega IDE

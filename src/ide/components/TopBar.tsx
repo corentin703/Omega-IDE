@@ -1,7 +1,7 @@
 
-import { Component, ReactElement } from 'react';
+import { Component, ReactNode } from 'react';
 
-function TopBarTabs(props: { children: ReactElement }) {
+function TopBarTabs(props: { children?: ReactNode }) {
     return (
         <div className="editor__panel__topbar__tabs">
             <div className="editor__panel__topbar__tabs__container">
@@ -36,7 +36,7 @@ class TopBarMore extends Component<TopBarMoreProps> {
     }
 }
 
-function TopBarFileName(props: { children: ReactElement }) {
+function TopBarFileName(props: { children?: ReactNode }) {
     return (
         <div className="editor__panel__topbar__filename">
             <span className="editor__panel__topbar__filename__content">
@@ -52,7 +52,7 @@ type TopBarTabProps = {
     userdata: any;
     selected: boolean;
     unsaved: boolean;
-    children: ReactElement;
+    children?: ReactNode;
 }
 
 class TopBarTab extends Component<TopBarTabProps> {
@@ -96,7 +96,7 @@ class TopBarTab extends Component<TopBarTabProps> {
     }
 }
 
-function TopBar(props: { children: ReactElement }) {
+function TopBar(props: { children?: ReactNode }) {
     return (
         <div className="editor__panel__topbar">
             {props.children}

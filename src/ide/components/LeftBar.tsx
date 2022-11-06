@@ -1,7 +1,7 @@
 
-import { Component, ReactElement } from 'react';
+import {Component, ReactNode, ReactNode} from 'react';
 
-class LeftBar extends Component<{ children: ReactElement }> {
+class LeftBar extends Component<{ children?: ReactNode }> {
     render() {
         return (
             <div className="editor__leftbar">
@@ -11,7 +11,7 @@ class LeftBar extends Component<{ children: ReactElement }> {
     }
 }
 
-class LeftBarTop extends Component<{ children: ReactElement }> {
+class LeftBarTop extends Component<{ children?: ReactNode }> {
     render() {
         return (
             <div className="editor__leftbar__container editor__leftbar__container-top">
@@ -21,7 +21,7 @@ class LeftBarTop extends Component<{ children: ReactElement }> {
     }
 }
 
-class LeftBarBottom extends Component<{ children: ReactElement }> {
+class LeftBarBottom extends Component<{ children?: ReactNode }> {
     render() {
         return (
             <div className="editor__leftbar__container editor__leftbar__container-bottom">
@@ -32,13 +32,13 @@ class LeftBarBottom extends Component<{ children: ReactElement }> {
 }
 
 type LeftBarActionProps = {
-    children: ReactElement;
-    locked: boolean;
-    selected: boolean;
-    onClick: (userdata: any) => void;
-    userdata: any;
-    img: string;
-    icon: string;
+    children?: ReactNode;
+    locked?: boolean;
+    selected?: boolean;
+    onClick?: (userdata: any) => void;
+    userdata?: any;
+    img?: string;
+    icon?: string;
 }
 
 class LeftBarAction extends Component<LeftBarActionProps> {

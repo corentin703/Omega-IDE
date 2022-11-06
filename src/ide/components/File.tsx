@@ -3,14 +3,14 @@ import React, { ChangeEvent, Component, EventHandler } from 'react';
 
 type FileProps = {
     name: string;
-    renaming: boolean;
+    renaming?: boolean;
     locked: boolean;
-    userdata: any;
+    userdata?: any;
 
-    onRemove: (userdata: any) => void;
-    onClick: (userdata: any) => void;
-    onCancel: (userdata: any) => void;
-    onRename: (userdata: any, oldName: string, newName: string) => boolean;
+    onRemove?: (userdata: any) => void;
+    onClick?: (userdata: any) => void;
+    onCancel?: (userdata: any) => void;
+    onRename?: (userdata: any, oldName: string, newName: string) => boolean;
 };
 
 type FileState = {

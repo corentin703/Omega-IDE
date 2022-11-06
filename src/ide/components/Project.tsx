@@ -1,23 +1,23 @@
 
-import React, { Component, ReactElement } from 'react';
+import React, { Component, ReactNode } from 'react';
 
 type ProjectProps = {
     name: string;
-    renaming: boolean;
+    renaming?: boolean;
     selected: boolean;
-    loading: boolean;
+    loading?: boolean;
     locked: boolean;
     nousb: boolean;
-    userdata: any;
-    onRemove: (userdata: any) => void;
-    onSelect: (userdata: any) => void;
-    onNewFile: (userdata: any) => void;
-    onRename: (userdata: any, name: string) => void;
-    onCancel: (userdata: any) => void;
-    onSendDevice: (userdata: any) => void;
-    onZip: (userdata: any) => void;
-    onRunSimu: (userdata: any) => void;
-    children: ReactElement;
+    userdata?: any;
+    onRemove?: (userdata: any) => void;
+    onSelect?: (userdata: any) => void;
+    onNewFile?: (userdata: any) => void;
+    onRename?: (userdata: any, name: string) => void;
+    onCancel?: (userdata: any) => void;
+    onSendDevice?: (userdata: any) => void;
+    onZip?: (userdata: any) => void;
+    onRunSimu?: (userdata: any) => void;
+    children?: ReactNode;
 };
 
 type ProjectStates = {
@@ -40,7 +40,7 @@ export default class Project extends Component<ProjectProps, ProjectStates> {
             name: props.name,
             oldName: "",
             
-            isRenaming: props.renaming,
+            isRenaming: props.renaming ?? false,
             ctx: {
                 open: false,
                 x: 0,

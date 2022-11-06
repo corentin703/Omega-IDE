@@ -4,6 +4,7 @@
   "private": true,
   "dependencies": {
     "@monaco-editor/react": "^4.4.6",
+    "@types/w3c-web-usb": "^1.0.6",
     "@typescript-eslint/eslint-plugin": "^5.42.0",
     "@typescript-eslint/parser": "^5.42.0",
     "firebase": "^9.13.0",
@@ -17,7 +18,7 @@
   },
   "scripts": {
     "start": "vite",
-    "build": "vite build",
+    "build": "tsc && vite build",
     "serve": "vite preview"
   },
   "eslintConfig": {
